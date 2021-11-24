@@ -1,0 +1,13 @@
+NAME : traveling-santa-2018-prime-paths.7165.tour
+COMMENT : Length = 7165
+COMMENT : Found by LKH [Keld Helsgaun] Tue Nov 23 21:27:10 2021
+TYPE : TOUR
+DIMENSION : 5
+TOUR_SECTION
+1
+3
+2
+4
+5
+-1
+EOF
