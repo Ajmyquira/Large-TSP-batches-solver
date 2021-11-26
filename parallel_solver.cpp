@@ -114,7 +114,7 @@ void solver(string filename, string index, double* best_score){
     string file_name = "LKH-2.0.9/tsp_solution" + index + ".csv";
     // Read the store of the solution
     double score = score_tour(file_name);
-    //cout << "\nScore [" << index << "]: " << score << endl;
+    //cout << "\nScore [" << index << "]: " << score << "----------------here!" << endl;
     
     // Critical section
     // Determine if the score calculated is the best score

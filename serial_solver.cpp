@@ -81,19 +81,46 @@ double score_tour(string filename){
     return stod(score_value);
 }
 
-int main(){
-    string path = "dataset";
-    for (const auto & entry : fs::directory_iterator(path)){
-        //cout << entry.path() << endl;
-        string path_string = entry.path().string();
+double serial_solver(vector<string> paths){
+    double best_score = INT_MAX;
+
+    for (unsigned int i = 0; i < paths.size(); i++){
         vector<string> x;
         vector<string> y;
-        read_CSV(path_string, &x, &y);
+        read_CSV(paths[i], &x, &y);
         write_TSP(x,y);
         write_parameters();
         system("cd .\\LKH-2.0.9 & .\\LKH params.par");
         double score = score_tour("LKH-2.0.9/tsp_solution.csv");
-        cout << "--------------------------------" << score << endl;
+        //cout << "\nScore [" << i << "]: " << score << " ------------------here!"<< endl;
+
+        // Determine if the score calculated is the best score
+        if(score < best_score) best_score = score;
     }
+
+    return best_score;
+}
+
+int main(){
+    string path = "dataset"; // Folder containing the cvs. files
+    vector<string> paths; // Store all cvs. files paths
+    
+    // Collect the paths of all csv files within dataset
+    for (const auto & entry : fs::directory_iterator(path)){
+        //cout << entry.path() << endl;
+        string path_string = entry.path().string();
+        paths.push_back(path_string);
+    }
+
+    double best_score;
+
+    //T0 = clock();
+    best_score = serial_solver(paths);
+	//T1 = clock();
+
+    //double time = (double(T1 - T0) / CLOCKS_PER_SEC);
+	//cout << "Execution time: " << time << endl;
+
+    cout << "Best score " << best_score << endl;
     return 0;
 }
