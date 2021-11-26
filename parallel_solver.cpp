@@ -5,12 +5,15 @@
 #include <filesystem>
 #include <thread>
 #include <string>
+#include <mutex>
 
 using namespace std;
 namespace fs = filesystem;
 
-string int_to_string(int number, int digits)
-{
+mutex m;
+
+// Convert an integer to a string with a specific number of digits
+string int_to_string(int number, int digits){
     string ans = "";
     while (number)
     {
@@ -95,46 +98,50 @@ double score_tour(string filename){
     return stod(score_value);
 }
 
-//void solver(string filename, string index, double* score){
-void solver(string filename, string index){
-    vector<string> x;
-    vector<string> y;
+void solver(string filename, string index, double* best_score){
+    vector<string> x; // Store the x values of the coordenates
+    vector<string> y; // Store the y values of the coordenates
+
     read_CSV(filename, &x, &y);
     write_TSP(x, y, index);
     write_parameters(index);
-    string command = "cd .\\LKH-2.0.9 & .\\LKH params" + index + ".par & cls";
+
+    // Execute the LKH solver
+    string command = "cd .\\LKH-2.0.9 & .\\LKH params" + index + ".par";
     const char* _command = command.c_str();
     system(_command);
+
     string file_name = "LKH-2.0.9/tsp_solution" + index + ".csv";
-    //*score = score_tour(file_name);
+    // Read the store of the solution
     double score = score_tour(file_name);
-    cout << "--------------------------------" << score << endl;
+    //cout << "\nScore [" << index << "]: " << score << endl;
+    
+    // Critical section
+    // Determine if the score calculated is the best score
+    m.lock();
+    if (score < *best_score) *best_score = score;
+    m.unlock();
 }
 
 double parallel_solver(vector<string> paths){
     vector<thread> threadVect;
-    double* scores = new double [paths.size()];
-	//unsigned int threadSpread = N / numThreads;
+    double best_score = INT_MAX;
+
 	for (unsigned int i = 0; i < paths.size(); i++) {
         string index = int_to_string(i, 3);
-		//threadVect.emplace_back(solver, paths[i], index, scores[i]);
-        threadVect.emplace_back(solver, paths[i], index);
+        threadVect.emplace_back(solver, paths[i], index, &best_score);
 	}
 	for (auto& t : threadVect) {
 		t.join();
 	}
-    /*for(unsigned int i = 0; i < paths.size(); i++){
-        cout << scores[i] << endl;
-    }*/
-    // Find the smallest score
-    //
-    delete[] scores;
-    return 0;
+    //cout << best_score << endl;
+    return best_score;
 }
 
 int main(){
-    string path = "dataset";
-    vector<string> paths;
+    string path = "dataset"; // Folder containing the cvs. files
+    vector<string> paths; // Store all cvs. files paths
+    
     // Collect the paths of all csv files within dataset
     for (const auto & entry : fs::directory_iterator(path)){
         //cout << entry.path() << endl;
@@ -145,13 +152,16 @@ int main(){
     // Parallel part
     unsigned int number_threads = thread::hardware_concurrency();
     cout << "Number of threads: " << number_threads << endl;
-    double final_score;
+    double best_score;
+    
     //T0 = clock();
-    final_score = parallel_solver(paths);
+    best_score = parallel_solver(paths);
 	//T1 = clock();
 
     //double time = (double(T1 - T0) / CLOCKS_PER_SEC);
 	//cout << "Execution time: " << time << endl;
 
+    cout << "Best score " << best_score << endl;
+    
     return 0;
 }
