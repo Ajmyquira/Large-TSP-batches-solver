@@ -3,6 +3,7 @@
 #include <fstream>
 #include <vector>
 #include <filesystem>
+#include <chrono>
 
 using namespace std;
 namespace fs = filesystem;
@@ -30,7 +31,7 @@ void read_CSV(string argv, vector<string>* vectorX, vector<string>* vectorY){
 }
 
 void write_TSP(vector<string> vectorX, vector<string> vectorY){
-    string filename("LKH-2.0.9/cities.tsp");
+    string filename("LKH-2.0.9/cities_tsp/cities.tsp");
     fstream outfile;
 
     outfile.open(filename, std::ios_base::out);
@@ -52,15 +53,15 @@ void write_TSP(vector<string> vectorX, vector<string> vectorY){
 }
 
 void write_parameters(){
-    string filename("LKH-2.0.9/params.par");
+    string filename("LKH-2.0.9/params_par/params.par");
     fstream outfile;
 
     outfile.open(filename, std::ios_base::out);
     if (!outfile.is_open()) {
         cout << "failed to open " << filename << '\n';
     } else {
-        outfile << "PROBLEM_FILE = cities.tsp" << endl;
-        outfile << "OUTPUT_TOUR_FILE = tsp_solution.csv" << endl;
+        outfile << "PROBLEM_FILE = cities_tsp/cities.tsp" << endl;
+        outfile << "OUTPUT_TOUR_FILE = solution_csv/tsp_solution.csv" << endl;
         outfile << "SEED = 2018" << endl;
         outfile << "CANDIDATE_SET_TYPE = POPMUSIC" << endl;
         outfile << "INITIAL_PERIOD = 10000" << endl;
@@ -90,8 +91,8 @@ double serial_solver(vector<string> paths){
         read_CSV(paths[i], &x, &y);
         write_TSP(x,y);
         write_parameters();
-        system("cd .\\LKH-2.0.9 & .\\LKH params.par");
-        double score = score_tour("LKH-2.0.9/tsp_solution.csv");
+        system("cd .\\LKH-2.0.9 & .\\LKH params_par/params.par");
+        double score = score_tour("LKH-2.0.9/solution_csv/tsp_solution.csv");
         //cout << "\nScore [" << i << "]: " << score << " ------------------here!"<< endl;
 
         // Determine if the score calculated is the best score
@@ -112,15 +113,16 @@ int main(){
         paths.push_back(path_string);
     }
 
+
     double best_score;
 
-    //T0 = clock();
+    chrono::time_point<std::chrono::high_resolution_clock> start, end;
+    start = chrono::high_resolution_clock::now();
     best_score = serial_solver(paths);
-	//T1 = clock();
-
-    //double time = (double(T1 - T0) / CLOCKS_PER_SEC);
-	//cout << "Execution time: " << time << endl;
-
+	end = chrono::high_resolution_clock::now();
+    int64_t duration = chrono::duration_cast<chrono::seconds>(end - start).count();
+    cout << endl << setw(10) << "Duration: " + to_string(duration) + " s\n";
+    
     cout << "Best score " << best_score << endl;
     return 0;
 }

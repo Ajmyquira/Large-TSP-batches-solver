@@ -6,6 +6,7 @@
 #include <thread>
 #include <string>
 #include <mutex>
+#include <chrono>
 
 using namespace std;
 namespace fs = filesystem;
@@ -47,7 +48,7 @@ void read_CSV(string argv, vector<string>* vectorX, vector<string>* vectorY){
 }
 
 void write_TSP(vector<string> vectorX, vector<string> vectorY, string index){
-    string filename = "LKH-2.0.9/cities" + index + ".tsp";
+    string filename = "LKH-2.0.9/cities_tsp/cities" + index + ".tsp";
     fstream outfile;
 
     outfile.open(filename, std::ios_base::out);
@@ -69,15 +70,15 @@ void write_TSP(vector<string> vectorX, vector<string> vectorY, string index){
 }
 
 void write_parameters(string index){
-    string filename = "LKH-2.0.9/params" + index + ".par";
+    string filename = "LKH-2.0.9/params_par/params" + index + ".par";
     fstream outfile;
 
     outfile.open(filename, std::ios_base::out);
     if (!outfile.is_open()) {
         cout << "failed to open " << filename << '\n';
     } else {
-        outfile << "PROBLEM_FILE = cities" << index << ".tsp" << endl;
-        outfile << "OUTPUT_TOUR_FILE = tsp_solution" << index << ".csv" << endl;
+        outfile << "PROBLEM_FILE = cities_tsp/cities" << index << ".tsp" << endl;
+        outfile << "OUTPUT_TOUR_FILE = solution_csv/tsp_solution" << index << ".csv" << endl;
         outfile << "SEED = 2018" << endl;
         outfile << "CANDIDATE_SET_TYPE = POPMUSIC" << endl;
         outfile << "INITIAL_PERIOD = 10000" << endl;
@@ -107,11 +108,11 @@ void solver(string filename, string index, double* best_score){
     write_parameters(index);
 
     // Execute the LKH solver
-    string command = "cd .\\LKH-2.0.9 & .\\LKH params" + index + ".par";
+    string command = "cd .\\LKH-2.0.9 & .\\LKH params_par/params" + index + ".par";
     const char* _command = command.c_str();
     system(_command);
 
-    string file_name = "LKH-2.0.9/tsp_solution" + index + ".csv";
+    string file_name = "LKH-2.0.9/solution_csv/tsp_solution" + index + ".csv";
     // Read the store of the solution
     double score = score_tour(file_name);
     //cout << "\nScore [" << index << "]: " << score << "----------------here!" << endl;
@@ -128,7 +129,7 @@ double parallel_solver(vector<string> paths){
     double best_score = INT_MAX;
 
 	for (unsigned int i = 0; i < paths.size(); i++) {
-        string index = int_to_string(i, 3);
+        string index = int_to_string(i, 4);
         threadVect.emplace_back(solver, paths[i], index, &best_score);
 	}
 	for (auto& t : threadVect) {
@@ -154,12 +155,12 @@ int main(){
     cout << "Number of threads: " << number_threads << endl;
     double best_score;
     
-    //T0 = clock();
+    chrono::time_point<std::chrono::high_resolution_clock> start, end;
+    start = chrono::high_resolution_clock::now();
     best_score = parallel_solver(paths);
-	//T1 = clock();
-
-    //double time = (double(T1 - T0) / CLOCKS_PER_SEC);
-	//cout << "Execution time: " << time << endl;
+	end = chrono::high_resolution_clock::now();
+    int64_t duration = chrono::duration_cast<chrono::seconds>(end - start).count();
+    cout << endl << setw(10) << "Duration: " + to_string(duration) + " s\n";
 
     cout << "Best score " << best_score << endl;
     
