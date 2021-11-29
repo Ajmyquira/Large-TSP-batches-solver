@@ -124,5 +124,17 @@ int main(){
     cout << endl << setw(10) << "Duration: " + to_string(duration) + " s\n";
     
     cout << "Best score " << best_score << endl;
+
+    // Write the final score
+    string filename = "final_score.txt";
+    fstream outfile;
+    outfile.open(filename, std::ios_base::out);
+    if (!outfile.is_open()) {
+        cout << "failed to open " << filename << '\n';
+    } else {
+        outfile << best_score;
+        //cout << "Done Writing!" << endl;
+    }
+    
     return 0;
 }

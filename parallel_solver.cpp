@@ -99,39 +99,50 @@ double score_tour(string filename){
     return stod(score_value);
 }
 
-void solver(string filename, string index, double* best_score){
-    vector<string> x; // Store the x values of the coordenates
-    vector<string> y; // Store the y values of the coordenates
+void solver(vector<string>* paths, unsigned int i, unsigned int thread_spread, double* best_score){
+    double local_best_score = INT_MAX;
 
-    read_CSV(filename, &x, &y);
-    write_TSP(x, y, index);
-    write_parameters(index);
+    for (unsigned int j = i * thread_spread; j < (i + 1) * thread_spread; j++){
+        vector<string> x; // Store the x values of the coordenates
+        vector<string> y; // Store the y values of the coordenates
+        
+        string index = int_to_string(j, 4);
 
-    // Execute the LKH solver
-    string command = "cd .\\LKH-2.0.9 & .\\LKH params_par/params" + index + ".par";
-    const char* _command = command.c_str();
-    system(_command);
+        read_CSV((*paths)[j], &x, &y);
+        write_TSP(x, y, index);
+        write_parameters(index);
 
-    string file_name = "LKH-2.0.9/solution_csv/tsp_solution" + index + ".csv";
-    // Read the store of the solution
-    double score = score_tour(file_name);
-    //cout << "\nScore [" << index << "]: " << score << "----------------here!" << endl;
-    
+        // Execute the LKH solver
+        string command = "cd .\\LKH-2.0.9 & .\\LKH params_par/params" + index + ".par";
+        const char* _command = command.c_str();
+        system(_command);
+
+        string file_name = "LKH-2.0.9/solution_csv/tsp_solution" + index + ".csv";
+        // Read the store of the solution
+        double score = score_tour(file_name);
+        //cout << "\nScore [" << index << "]: " << score << "----------------here!" << endl;
+        
+        
+        // Determine if the score calculated is the best score
+        if(score < local_best_score) local_best_score = score;
+    }
     // Critical section
-    // Determine if the score calculated is the best score
     m.lock();
-    if (score < *best_score) *best_score = score;
+    if (local_best_score < *best_score) *best_score = local_best_score;
     m.unlock();
 }
 
-double parallel_solver(vector<string> paths){
+double parallel_solver(vector<string> paths, unsigned int num_threads){
     vector<thread> threadVect;
+    unsigned int thread_spread = paths.size() / num_threads;
     double best_score = INT_MAX;
 
-	for (unsigned int i = 0; i < paths.size(); i++) {
-        string index = int_to_string(i, 4);
-        threadVect.emplace_back(solver, paths[i], index, &best_score);
+	for (unsigned int i = 0; i < num_threads; i++) {
+        //string index = int_to_string(i, 4);
+        //vector<string> sub_paths = paths.substr(i * thread_spread, thread_spread);
+        threadVect.emplace_back(solver, &paths, i, thread_spread, &best_score);
 	}
+
 	for (auto& t : threadVect) {
 		t.join();
 	}
@@ -157,12 +168,23 @@ int main(){
     
     chrono::time_point<std::chrono::high_resolution_clock> start, end;
     start = chrono::high_resolution_clock::now();
-    best_score = parallel_solver(paths);
+    best_score = parallel_solver(paths, number_threads);
 	end = chrono::high_resolution_clock::now();
     int64_t duration = chrono::duration_cast<chrono::seconds>(end - start).count();
     cout << endl << setw(10) << "Duration: " + to_string(duration) + " s\n";
 
-    cout << "Best score " << best_score << endl;
+    cout << "Best score: " << best_score << endl;
     
+    // Write the final score
+    string filename = "final_score.txt";
+    fstream outfile;
+    outfile.open(filename, std::ios_base::out);
+    if (!outfile.is_open()) {
+        cout << "failed to open " << filename << '\n';
+    } else {
+        outfile << best_score;
+        //cout << "Done Writing!" << endl;
+    }
+
     return 0;
 }
